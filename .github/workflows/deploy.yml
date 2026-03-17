@@ -1,28 +1,40 @@
-name: 自动部署环境
+name: 自动部署 PinsRefAI
+
 on:
   push:
-    branches: [ main ] # 只要你 push 代码到 main 分支，就触发
+    branches: ["main"] # 只有代码推送到 main 时才触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 步骤1：下载我的代码
+      - name: 1. 下载代码
         uses: actions/checkout@v4
 
-      - name: 步骤2：安装 Node.js 环境
+      - name: 2. 安装 Node 环境
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: 'npm'
 
-      - name: 步骤3：安装 Google 依赖项
+      - name: 3. 安装依赖 (包含 Google SDK)
         run: npm install
 
-      - name: 步骤4：构建项目（如果有打包指令）
-        run: npm run build --if-present
+      - name: 4. 打包项目 (生成 dist 文件夹)
+        run: npm run build
 
-      - name: 步骤5：部署到 GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: 5. 配置 Pages
+        uses: actions/configure-pages@v4
+
+      - name: 6. 上传打包后的文件
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ # 如果你的网页是 index.html 在根目录，就填 ./
+          path: './dist' # 确保这里和 Vite 生成的文件夹一致
+
+      - name: 7. 正式发布
+        uses: actions/deploy-pages@v4
