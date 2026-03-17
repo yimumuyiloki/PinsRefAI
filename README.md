@@ -11,7 +11,7 @@
 
 ## 🛠️ 部署到 GitHub Pages
 
-本项目已配置好 GitHub Actions，可以实现自动部署：
+本项目已配置好 GitHub Actions，可以实现自动部署
 
 1. **Fork 或上传代码**：将本项目代码上传到您的 GitHub 仓库。
 2. **启用 GitHub Actions**：
@@ -39,3 +39,7 @@
 ## 📄 许可证
 
 Apache-2.0
+
+## ✉️ 联系方式
+
+如您有任何使用反馈和改进建议，欢迎发送内容至邮箱：yimumuyi.loki@gmail.com
