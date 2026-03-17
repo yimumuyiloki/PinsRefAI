@@ -1,0 +1,28 @@
+name: 自动部署环境
+on:
+  push:
+    branches: [ main ] # 只要你 push 代码到 main 分支，就触发
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 步骤1：下载我的代码
+        uses: actions/checkout@v4
+
+      - name: 步骤2：安装 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 步骤3：安装 Google 依赖项
+        run: npm install
+
+      - name: 步骤4：构建项目（如果有打包指令）
+        run: npm run build --if-present
+
+      - name: 步骤5：部署到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./ # 如果你的网页是 index.html 在根目录，就填 ./
