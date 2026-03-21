@@ -55,6 +55,7 @@ async function analyzeReference(
   role: string,
   description: string,
   platform: 'pinterest' | 'artstation',
+  promptLang: 'zh' | 'en',
   imageData?: string,
   customApiKey?: string
 ): Promise<AnalysisResult> {
@@ -70,14 +71,17 @@ async function analyzeReference(
 
 你的任务是：
 1. 为每个方向（n1-n6）提供一个最能在 ${platform === 'pinterest' ? 'Pinterest' : 'ArtStation'} 上触发高质量视觉反馈的英文搜索关键词，并附带简短的中文翻译。
-2. 另外生成两组专门的搜索关键词列表，每个关键词都必须包含英文原文和中文翻译：
+2. 另外生成两组专门的搜索关键词列表，每个关键词都必须包含英文原文 and 中文翻译：
    - "artstation_keywords": 6个最适合在 ArtStation 搜索的专业术语或风格词。
    - "pinterest_keywords": 6个最适合在 Pinterest 搜索的描述性词汇。
-3. **新增任务**：基于参考图和描述的设计构思，生成一段高质量的 AI 图像生成提示词（Prompt），适用于 Midjourney、Stable Diffusion 或 DALL-E。提示词应包含主体描述、艺术风格、光影氛围、构图细节等，且必须是英文。
+3. **AI 提示词生成**：基于参考图和描述的设计构思，生成一段高质量的 AI 图像生成提示词（Prompt）。
+   - 如果用户选择 **中文模型 (zh)**：生成适配 **即梦 (Jimeng)、Liblib、Lovart** 的中文提示词。提示词应富有描述性，包含主体、细节、风格、构图和光影。
+   - 如果用户选择 **英文模型 (en)**：生成适配 **Nano Banana、Gemini、ChatGPT/DALL-E/Midjourney** 的英文提示词。提示词应包含主体描述、艺术风格、光影氛围、构图细节等。
 
 角色: ${role}
 描述: ${description}
 目标平台: ${platform}
+提示词语言/模型优化: ${promptLang === 'zh' ? '中文 (适配即梦/Liblib/Lovart)' : '英文 (适配Nano Banana/Gemini/ChatGPT)'}
 
 请返回以下 JSON 格式的数据：
 {
@@ -95,7 +99,7 @@ async function analyzeReference(
     { "label": "权重方向名称", "keyword": "English Keyword", "translation": "中文翻译" },
     ...
   ],
-  "aiPrompt": "一段完整的英文 AI 绘图提示词"
+  "aiPrompt": "生成的 AI 绘图提示词"
 }
 
 注意：
@@ -211,6 +215,7 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [platform, setPlatform] = useState<'pinterest' | 'artstation'>('pinterest');
+  const [promptLang, setPromptLang] = useState<'zh' | 'en'>('zh');
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -290,7 +295,7 @@ export default function App() {
     setCopied(false);
 
     try {
-      const data = await analyzeReference(role, description, platform, image || undefined, apiKey);
+      const data = await analyzeReference(role, description, platform, promptLang, image || undefined, apiKey);
       setResult(data);
       
       // Scroll to results
@@ -477,6 +482,31 @@ export default function App() {
               className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-6 py-5 min-h-[140px] focus:outline-none focus:border-pink-500 transition-colors resize-none text-gray-700 placeholder:text-gray-300"
             />
           </div>
+
+          {/* AI Prompt Language Toggle */}
+          <div className="space-y-2">
+            <label className="text-xs text-gray-400 uppercase tracking-wider font-bold">AI 提示词模型优化</label>
+            <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+              <button
+                onClick={() => setPromptLang('zh')}
+                className={cn(
+                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                  promptLang === 'zh' ? "bg-white text-pink-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                中文 (即梦/Liblib/Lovart)
+              </button>
+              <button
+                onClick={() => setPromptLang('en')}
+                className={cn(
+                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all",
+                  promptLang === 'en' ? "bg-white text-pink-600 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                英文 (Gemini/MJ/ChatGPT)
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -532,7 +562,11 @@ export default function App() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">AI 图像生成提示词</h2>
-                      <p className="text-xs text-gray-400 mt-1">适用于 Midjourney / Stable Diffusion / DALL-E</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {promptLang === 'zh' 
+                          ? '适配 即梦 (Jimeng) / Liblib / Lovart' 
+                          : '适配 Nano Banana / Gemini / ChatGPT / Midjourney'}
+                      </p>
                     </div>
                   </div>
 
@@ -613,7 +647,7 @@ export default function App() {
                             </div>
                             
                             <div className="relative">
-                              <h3 className="text-4xl md:text-5xl font-black tracking-tighter leading-[0.85] uppercase break-words">
+                              <h3 className="text-3xl md:text-4xl font-black tracking-tighter leading-[0.85] uppercase break-words">
                                 {dir.keyword}
                               </h3>
                               {dir.translation && (
