@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages  # 关键点：必须手动加上这两行
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: 1. 下载代码
@@ -37,4 +40,5 @@ jobs:
           path: './dist' # 确保这里和 Vite 生成的文件夹一致
 
       - name: 7. 正式发布
+        id: deployment    # 增加这个 id
         uses: actions/deploy-pages@v4
