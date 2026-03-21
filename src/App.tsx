@@ -13,7 +13,9 @@ import {
   Sparkles,
   LayoutGrid,
   Settings,
-  X
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -44,6 +46,7 @@ interface AnalysisResult {
     pinterest: KeywordWithTranslation[];
   };
   visualDirections: VisualDirection[];
+  aiPrompt: string;
   groundingLinks?: { title: string; uri: string }[];
 }
 
@@ -70,6 +73,7 @@ async function analyzeReference(
 2. 另外生成两组专门的搜索关键词列表，每个关键词都必须包含英文原文和中文翻译：
    - "artstation_keywords": 6个最适合在 ArtStation 搜索的专业术语或风格词。
    - "pinterest_keywords": 6个最适合在 Pinterest 搜索的描述性词汇。
+3. **新增任务**：基于参考图和描述的设计构思，生成一段高质量的 AI 图像生成提示词（Prompt），适用于 Midjourney、Stable Diffusion 或 DALL-E。提示词应包含主体描述、艺术风格、光影氛围、构图细节等，且必须是英文。
 
 角色: ${role}
 描述: ${description}
@@ -90,7 +94,8 @@ async function analyzeReference(
   "visualDirections": [
     { "label": "权重方向名称", "keyword": "English Keyword", "translation": "中文翻译" },
     ...
-  ]
+  ],
+  "aiPrompt": "一段完整的英文 AI 绘图提示词"
 }
 
 注意：
@@ -157,8 +162,9 @@ async function analyzeReference(
               required: ["label", "keyword", "translation"],
             },
           },
+          aiPrompt: { type: Type.STRING }
         },
-        required: ["keywords", "visualDirections"],
+        required: ["keywords", "visualDirections", "aiPrompt"],
       },
     },
   });
@@ -207,6 +213,7 @@ export default function App() {
   const [platform, setPlatform] = useState<'pinterest' | 'artstation'>('pinterest');
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState(() => {
     try {
@@ -280,6 +287,7 @@ export default function App() {
 
     setIsAnalyzing(true);
     setResult(null); // Clear previous results
+    setCopied(false);
 
     try {
       const data = await analyzeReference(role, description, platform, image || undefined, apiKey);
@@ -307,6 +315,16 @@ export default function App() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setToast('提示词已复制到剪切板');
+    setTimeout(() => {
+      setToast(null);
+      setCopied(false);
+    }, 3000);
   };
 
   const openSearch = (platform: 'artstation' | 'pinterest' | 'google', query: string) => {
@@ -505,6 +523,45 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-16 pt-16 border-t border-gray-100"
             >
+              {/* AI Prompt Section */}
+              {result.aiPrompt && (
+                <section className="space-y-8">
+                  <div className="flex items-center gap-3 text-gray-900">
+                    <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-pink-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">AI 图像生成提示词</h2>
+                      <p className="text-xs text-gray-400 mt-1">适用于 Midjourney / Stable Diffusion / DALL-E</p>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-violet-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                    <div className="relative bg-white border border-gray-100 rounded-2xl p-8 space-y-6 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-pink-500">Prompt Output</span>
+                        <button
+                          onClick={() => copyToClipboard(result.aiPrompt)}
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all",
+                            copied 
+                              ? "bg-green-500 text-white" 
+                              : "bg-gray-900 text-white hover:bg-gray-800"
+                          )}
+                        >
+                          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copied ? '已复制' : '一键复制提示词'}</span>
+                        </button>
+                      </div>
+                      <p className="text-lg font-medium text-gray-800 leading-relaxed font-serif italic">
+                        "{result.aiPrompt}"
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Visual Directions Waterfall */}
               {result.visualDirections && (
                 <section className="space-y-8">
